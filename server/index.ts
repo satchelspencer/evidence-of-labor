@@ -3,6 +3,7 @@ dotenv.config({ path: ".env.local" });
 
 import express from "express";
 import fs from "fs";
+import { Server } from "socket.io";
 
 import { embed } from "./embed.js";
 
@@ -29,8 +30,21 @@ server.get("/embed/:strng", (req, res) => {
   });
 });
 
-server.listen(3001, () => {
+const http = server.listen(3001, () => {
   console.log(`listening...`);
 });
 
-type P<T> = { [s: string]: T };
+const io = new Server({
+  serveClient: false,
+  cors: {
+    origin: "*",
+  },
+});
+
+io.on("connection", (socket) => {
+  socket.on("word", (word) => {
+    io.emit("word", word);
+  });
+});
+
+io.listen(http);

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { words } from "./vocab";
 import _ from "lodash";
+import { io, Socket } from "socket.io-client";
+
 const TSNE = require("tsne-js");
 
 interface Round {
@@ -138,7 +140,49 @@ try {
   x = JSON.parse(localStorage.getItem("ahh")!) ?? [];
 } catch {}
 
+const API_URL = `http://${window.location.hostname}:3001`;
+
 export default function App() {
+  const [socket, setSocket] = useState<Socket>();
+
+  useEffect(() => {
+    const s = io(API_URL);
+    s.on("connect", () => {
+      setSocket(s);
+    });
+  }, []);
+
+  return socket ? <Tpicker socket={socket} /> : <div>connecting...</div>;
+}
+
+interface TrainerProps {
+  socket: Socket;
+}
+
+function Tpicker(props: TrainerProps) {
+  const [encoder, setEncoder] = useState<boolean | null>(null);
+
+  return encoder === null ? (
+    <div>
+      <button onClick={() => setEncoder(true)}>ENCODE</button>
+      <button onClick={() => setEncoder(false)}>DECODE</button>
+    </div>
+  ) : encoder ? (
+    <Encoder {...props} />
+  ) : (
+    <Decoder {...props} />
+  );
+}
+
+function Encoder(props: TrainerProps) {
+  const [word, setWord] = useState<string>();
+  useEffect(() => {
+    props.socket.on("word", (w) => setWord(w));
+  }, []);
+  return <div>encode {word}</div>;
+}
+
+function Decoder(props: TrainerProps) {
   const [history, setHistory] = useState<History>(x),
     vocab = useMemo(
       () =>
@@ -164,6 +208,10 @@ export default function App() {
     [loading, setLoading] = useState(false),
     [lastRound, setLastRound] = useState<Round>();
 
+  useEffect(() => {
+    if (nextWord) props.socket.emit("word", nextWord.string);
+  }, [nextWord?.string]);
+
   return (
     <div
       style={{
@@ -178,7 +226,7 @@ export default function App() {
       {nextWord ? (
         encoding === 0 ? (
           <div>
-            <p>encode: "{nextWord?.string}"</p>
+            <p>wait for encoder</p>
             <button autoFocus onClick={() => setEncoding(1)}>
               ok
             </button>
@@ -243,7 +291,7 @@ export default function App() {
 
 async function getEmbedding(text: string): Promise<number[]> {
   const res = await (
-    await fetch(`http://localhost:3001/embed/${encodeURIComponent(text)}`)
+    await fetch(`${API_URL}/embed/${encodeURIComponent(text)}`)
   ).json();
   return res;
 }
