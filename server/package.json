@@ -1,0 +1,15 @@
+{
+  "name": "@eol/server",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "lodash": "^4.17.21",
+    "node-fetch": "^3.3.1",
+    "ts-node": "^10.9.1"
+  },
+  "scripts": {
+    "start": "ts-node --esm index.ts"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "dependencies": {
+    "concurrently": "^8.0.1"
+  },
+  "scripts": {
+    "start": "concurrently -p name --names \"server,client\" \"yarn workspace @eol/server start\" \"yarn workspace @eol/client start\""
+  }
+}
