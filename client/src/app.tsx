@@ -26,7 +26,7 @@ type Vocab = {
 };
 
 const SET_SIZE = 5;
-const WORD_FORGIVE_LENGTH = 4;
+const WORD_FORGIVE_LENGTH = 2;
 
 function getVocab(history: History, wordList: string[]): Vocab {
   const histories: { [word: string]: History } = {};
@@ -120,14 +120,18 @@ function sampleVocab(vocab: Vocab, seq: number) {
 
   console.log(
     _.takeWhile(scored, (s) => s[1])
-      .map((s) =>
-        [
-          round(s[1]),
-          s[0].string,
-          round(s[0].meanDist),
-          s[0].history.length,
-          s[0].lastSeen,
-        ].join(" ")
+      .map(
+        (s) =>
+          `"${s[0].string}", score: ${round(s[1])} dist: ${round(
+            s[0].meanDist
+          )}, lastSeen: ${s[0].lastSeen}`
+        // [
+        //   round(s[1]),
+        //   s[0].string,
+        //   round(s[0].meanDist),
+        //   s[0].history.length,
+        //   s[0].lastSeen,
+        // ].join(" ")
       )
       .join("\n")
   );
@@ -142,7 +146,7 @@ type State = {
 
 const LS_KEY = "eol-state-new";
 
-let x: State = { history: [], words };
+let x: State = { history: [], words: _.range(100).map((x) => x + "") };
 try {
   x = JSON.parse(localStorage.getItem(LS_KEY)!) ?? x;
 } catch {}
@@ -261,15 +265,8 @@ function Encoder(props: TrainerProps) {
 function Decoder(props: TrainerProps) {
   const [state, setState] = useState<State>(x);
 
-  console.log(state);
-
   const vocab = useMemo(
-      () =>
-        getVocab(
-          state.history,
-          state.words
-          //_.range(100).map((r) => r + "")
-        ),
+      () => getVocab(state.history, state.words),
       [Math.floor(state.history.length / SET_SIZE), state.words]
     ),
     nextWord = useMemo(
