@@ -135,9 +135,16 @@ function sampleVocab(vocab: Vocab, seq: number) {
   return set[seq % SET_SIZE][0];
 }
 
-let x: History = [];
+type State = {
+  history: History;
+  words: string[];
+};
+
+const LS_KEY = "eol-state-new";
+
+let x: State = { history: [], words };
 try {
-  x = JSON.parse(localStorage.getItem("ahh")!) ?? [];
+  x = JSON.parse(localStorage.getItem(LS_KEY)!) ?? x;
 } catch {}
 
 const API_URL = `http://${window.location.hostname}:3001`;
@@ -162,56 +169,6 @@ interface TrainerProps {
 function Tpicker(props: TrainerProps) {
   const [encoder, setEncoder] = useState<boolean | null>(null);
 
-  return encoder === null ? (
-    <div>
-      <button onClick={() => setEncoder(true)}>ENCODE</button>
-      <button onClick={() => setEncoder(false)}>DECODE</button>
-    </div>
-  ) : encoder ? (
-    <Encoder {...props} />
-  ) : (
-    <Decoder {...props} />
-  );
-}
-
-function Encoder(props: TrainerProps) {
-  const [word, setWord] = useState<string>();
-  useEffect(() => {
-    props.socket.on("word", (w) => setWord(w));
-  }, []);
-  return <div>encode {word}</div>;
-}
-
-function Decoder(props: TrainerProps) {
-  const [history, setHistory] = useState<History>(x),
-    vocab = useMemo(
-      () =>
-        getVocab(
-          history,
-          words
-          //_.range(100).map((r) => r + "")
-        ),
-      [Math.floor(history.length / SET_SIZE)]
-    ),
-    nextWord = useMemo(
-      () => sampleVocab(vocab, history.length),
-      [vocab, history.length]
-    );
-
-  useEffect(() => {
-    localStorage.setItem("ahh", JSON.stringify(history));
-    console.log(history.length);
-  }, [history.length]);
-
-  const [encoding, setEncoding] = useState(0),
-    [guess, setGuess] = useState<string>(),
-    [loading, setLoading] = useState(false),
-    [lastRound, setLastRound] = useState<Round>();
-
-  useEffect(() => {
-    if (nextWord) props.socket.emit("word", nextWord.string);
-  }, [nextWord?.string]);
-
   return (
     <div
       style={{
@@ -223,15 +180,121 @@ function Decoder(props: TrainerProps) {
         justifyContent: "center",
       }}
     >
+      {encoder === null ? (
+        <div>
+          <button onClick={() => setEncoder(true)}>ENCODE</button>
+          <button onClick={() => setEncoder(false)}>DECODE</button>
+        </div>
+      ) : encoder ? (
+        <Encoder {...props} />
+      ) : (
+        <Decoder {...props} />
+      )}
+    </div>
+  );
+}
+
+function SaveLoad() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        padding: 10,
+        display: "flex",
+        flexDirection: "row",
+        gap: 10,
+      }}
+    >
+      <button
+        onClick={() => {
+          const inp = document.createElement("input");
+          inp.type = "file";
+          inp.hidden = true;
+          inp.accept = ".json";
+          inp.click();
+          inp.onchange = () => {
+            const o = new FileReader();
+            o.onload = (e) => {
+              localStorage.setItem(LS_KEY, e.target?.result + "");
+              window.location.reload();
+            };
+            inp.files && o.readAsText(inp.files[0]);
+          };
+        }}
+      >
+        load
+      </button>
+      <button
+        onClick={() => {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(
+            new Blob([localStorage.getItem(LS_KEY)!], { type: "text/json" })
+          );
+          a.download = `eol-${new Date().toISOString()}.json`;
+          a.click();
+        }}
+      >
+        save
+      </button>
+      <button
+        onDoubleClick={() => {
+          localStorage.clear();
+          window.location.reload();
+        }}
+      >
+        clear
+      </button>
+    </div>
+  );
+}
+
+function Encoder(props: TrainerProps) {
+  const [word, setWord] = useState<string>();
+  useEffect(() => {
+    props.socket.on("word", (w) => setWord(w));
+  }, []);
+  return <div>{word}</div>;
+}
+
+function Decoder(props: TrainerProps) {
+  const [state, setState] = useState<State>(x);
+
+  console.log(state);
+
+  const vocab = useMemo(
+      () =>
+        getVocab(
+          state.history,
+          state.words
+          //_.range(100).map((r) => r + "")
+        ),
+      [Math.floor(state.history.length / SET_SIZE), state.words]
+    ),
+    nextWord = useMemo(
+      () => sampleVocab(vocab, state.history.length),
+      [vocab, state.history.length]
+    );
+
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  }, [state.history.length]);
+
+  const [encoding, setEncoding] = useState(true),
+    [guess, setGuess] = useState<string>(),
+    [loading, setLoading] = useState(false),
+    [lastRound, setLastRound] = useState<Round>();
+
+  useEffect(() => {
+    if (nextWord) props.socket.emit("word", nextWord.string);
+  }, [nextWord?.string]);
+
+  return (
+    <>
+      {" "}
       {nextWord ? (
-        encoding === 0 ? (
-          <div>
-            <p>wait for encoder</p>
-            <button autoFocus onClick={() => setEncoding(1)}>
-              ok
-            </button>
-          </div>
-        ) : encoding === 1 ? (
+        encoding ? (
           <div>
             <p>decode</p>
             <input
@@ -250,42 +313,43 @@ function Decoder(props: TrainerProps) {
                     actual: nextWord.string,
                     guess: guess ?? "",
                     distance: dist,
-                    seq: history.length,
+                    seq: state.history.length,
                   };
                   setLoading(false);
                   setGuess(undefined);
-                  setEncoding(2);
+                  setEncoding(false);
                   setLastRound(round);
-                  setHistory([...history, round]);
+                  setState({ ...state, history: [...state.history, round] });
                 }
               }}
             />
           </div>
-        ) : (
-          lastRound && (
-            <div>
-              <p>answer was "{lastRound.actual}"</p>
-              <p>
-                grade:{" "}
-                {
-                  "fdcba"[
-                    Math.floor(norm(history, (r) => r.distance)(lastRound) * 4)
-                  ]
-                }
-              </p>
-              <button
-                autoFocus
-                onClick={async () => {
-                  setEncoding(0);
-                }}
-              >
-                ok
-              </button>
-            </div>
-          )
-        )
+        ) : lastRound ? (
+          <div>
+            <p>answer was "{lastRound.actual}"</p>
+            <p>
+              grade:{" "}
+              {
+                "fdcba"[
+                  Math.floor(
+                    norm(state.history, (r) => r.distance)(lastRound) * 4
+                  )
+                ]
+              }
+            </p>
+            <button
+              autoFocus
+              onClick={async () => {
+                setEncoding(true);
+              }}
+            >
+              ok
+            </button>
+          </div>
+        ) : null
       ) : null}
-    </div>
+      <SaveLoad />
+    </>
   );
 }
 
