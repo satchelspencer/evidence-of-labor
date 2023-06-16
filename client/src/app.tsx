@@ -1,12 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { words } from "./vocab";
+import { ImgHTMLAttributes, useEffect, useMemo, useRef, useState } from "react";
 import _ from "lodash";
 import { io, Socket } from "socket.io-client";
 
-const TSNE = require("tsne-js");
-
 interface Round {
-  guess: string;
   actual: string;
   distance: number;
   seq: number;
@@ -146,7 +142,8 @@ type State = {
 
 const LS_KEY = "eol-state-new";
 
-let x: State = { history: [], words: _.range(100).map((x) => x + "") };
+const s = _.shuffle(_.range(6, 4109));
+let x: State = { history: [], words: s.map((x) => x + "") };
 try {
   x = JSON.parse(localStorage.getItem(LS_KEY)!) ?? x;
 } catch {}
@@ -259,7 +256,12 @@ function Encoder(props: TrainerProps) {
   useEffect(() => {
     props.socket.on("word", (w) => setWord(w));
   }, []);
-  return <div>{word}</div>;
+  return (
+    <div>
+      {word}
+      {word && <Image src={word} />}
+    </div>
+  );
 }
 
 function Decoder(props: TrainerProps) {
@@ -278,10 +280,7 @@ function Decoder(props: TrainerProps) {
     localStorage.setItem(LS_KEY, JSON.stringify(state));
   }, [state.history.length]);
 
-  const [encoding, setEncoding] = useState(true),
-    [guess, setGuess] = useState<string>(),
-    [loading, setLoading] = useState(false),
-    [lastRound, setLastRound] = useState<Round>();
+  const [encoding, setEncoding] = useState(true);
 
   useEffect(() => {
     if (nextWord) props.socket.emit("word", nextWord.string);
@@ -289,89 +288,73 @@ function Decoder(props: TrainerProps) {
 
   return (
     <>
-      {" "}
       {nextWord ? (
         encoding ? (
           <div>
             <p>decode</p>
-            <input
-              autoFocus
-              disabled={loading}
-              value={guess ?? ""}
-              onChange={(e) => setGuess(e.target.value)}
-              onKeyDown={async (e) => {
-                if (e.key === "Enter") {
-                  setLoading(true);
-                  const dist = compare(
-                    await getEmbedding(nextWord.string),
-                    await getEmbedding(guess ?? "")
-                  );
-                  const round: Round = {
-                    actual: nextWord.string,
-                    guess: guess ?? "",
-                    distance: dist,
-                    seq: state.history.length,
-                  };
-                  setLoading(false);
-                  setGuess(undefined);
-                  setEncoding(false);
-                  setLastRound(round);
-                  setState({ ...state, history: [...state.history, round] });
-                }
-              }}
-            />
+            <LiveImage />
+            <button autoFocus onClick={() => setEncoding(false)}>
+              ready
+            </button>
           </div>
-        ) : lastRound ? (
+        ) : (
           <div>
-            <p>answer was "{lastRound.actual}"</p>
-            <p>
-              grade:{" "}
-              {
-                "fdcba"[
-                  Math.floor(
-                    norm(state.history, (r) => r.distance)(lastRound) * 4
-                  )
-                ]
-              }
-            </p>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <LiveImage />
+              <Image src={nextWord.string} />
+            </div>
             <button
               autoFocus
               onClick={async () => {
+                const round: Round = {
+                  actual: nextWord.string,
+                  distance: 1,
+                  seq: state.history.length,
+                };
+                setState({ ...state, history: [...state.history, round] });
                 setEncoding(true);
               }}
             >
-              ok
+              GOOD
+            </button>
+            &nbsp;
+            <button
+              onClick={async () => {
+                const round: Round = {
+                  actual: nextWord.string,
+                  distance: 0,
+                  seq: state.history.length,
+                };
+                setState({ ...state, history: [...state.history, round] });
+                setEncoding(true);
+              }}
+            >
+              BAD
             </button>
           </div>
-        ) : null
+        )
       ) : null}
       <SaveLoad />
     </>
   );
 }
 
-async function getEmbedding(text: string): Promise<number[]> {
-  const res = await (
-    await fetch(`${API_URL}/embed/${encodeURIComponent(text)}`)
-  ).json();
-  return res;
+function LiveImage(props: {}) {
+  return (
+    <img
+      style={{ flex: "0" }}
+      width={200}
+      src={`${API_URL}/live?x=${Math.random()}`}
+    />
+  );
 }
 
-export function compare(a: number[], b: number[]) {
-  const len = Math.min(a.length, b.length);
-  let dab = 0,
-    da = 0,
-    db = 0,
-    dim = 0;
-  while (dim < len) {
-    const ca = a[dim];
-    const cb = b[dim];
-    dab += ca * cb;
-    da += ca * ca;
-    db += cb * cb;
-    dim += 1;
-  }
-
-  const mag = Math.sqrt(da * db);
-  return mag === 0 ? 0 : dab / mag;
+function Image(props: { src: string }) {
+  return (
+    <img
+      style={{ flex: "none" }}
+      width={200}
+      src={`${API_URL}/frame/${props.src}`}
+    />
+  );
 }
