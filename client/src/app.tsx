@@ -292,7 +292,7 @@ function Decoder(props: TrainerProps) {
         encoding ? (
           <div>
             <p>decode</p>
-            <LiveImage />
+            <LiveImage src="left" />
             <button autoFocus onClick={() => setEncoding(false)}>
               ready
             </button>
@@ -300,7 +300,7 @@ function Decoder(props: TrainerProps) {
         ) : (
           <div>
             <div style={{ display: "flex", alignItems: "center" }}>
-              <LiveImage />
+              <LiveImage src="center" />
               <Image src={nextWord.string} />
             </div>
             <button
@@ -353,12 +353,12 @@ function Decoder(props: TrainerProps) {
   );
 }
 
-function LiveImage(props: {}) {
+function LiveImage(props: { src: string }) {
   return (
     <img
       style={{ flex: "0" }}
       width={200}
-      src={`${API_URL}/live?x=${Math.random()}`}
+      src={`${API_URL}/live/${props.src}?x=${Math.random()}`}
     />
   );
 }

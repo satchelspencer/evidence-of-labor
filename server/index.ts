@@ -11,6 +11,13 @@ import grandiose from "grandiose-mac";
 import sharp from "sharp";
 import beep from "beepbeep";
 
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const video = require("./build/Release/video.node");
+
+// const mat = new video.Mat(500, 500, 16)
+// console.log(mat.show());
+
 if (!fs.existsSync("data")) fs.mkdirSync("data");
 
 const server = express();
@@ -118,6 +125,11 @@ async function run() {
 }
 
 //run();
+
+server.get("/live/:which", async (req, res) => {
+  res.contentType("jpg");
+  res.end(await getImage(cameras[req.params.which]));
+});
 
 server.get("/live", async (req, res) => {
   res.contentType("jpg");
