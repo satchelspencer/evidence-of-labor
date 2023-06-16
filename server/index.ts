@@ -1,4 +1,5 @@
 import * as dotenv from "dotenv";
+import _ from "lodash";
 dotenv.config({ path: ".env.local" });
 
 import express from "express";
@@ -98,7 +99,16 @@ async function getImage(cameraName: string) {
 }
 
 async function run() {
-  let i = 0;
+  let i =
+    _.max(
+      fs.readdirSync(`./data/capture`).map((d) => {
+        try {
+          return parseInt(d.match(/(\d+)\.jpg/)?.[1] ?? "-1");
+        } catch {
+          return -1;
+        }
+      })
+    ) + 1;
   while (true) {
     const img = await getImage(cameras.center);
     beep();
