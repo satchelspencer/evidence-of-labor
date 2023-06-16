@@ -107,7 +107,7 @@ async function run() {
   }
 }
 
-run();
+//run();
 
 server.get("/live", async (req, res) => {
   res.contentType("jpg");

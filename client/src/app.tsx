@@ -322,6 +322,20 @@ function Decoder(props: TrainerProps) {
               onClick={async () => {
                 const round: Round = {
                   actual: nextWord.string,
+                  distance: 0.5,
+                  seq: state.history.length,
+                };
+                setState({ ...state, history: [...state.history, round] });
+                setEncoding(true);
+              }}
+            >
+              OK
+            </button>
+            &nbsp;
+            <button
+              onClick={async () => {
+                const round: Round = {
+                  actual: nextWord.string,
                   distance: 0,
                   seq: state.history.length,
                 };
