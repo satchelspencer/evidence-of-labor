@@ -8,6 +8,7 @@ import { Server } from "socket.io";
 import { embed } from "./embed.js";
 import grandiose from "grandiose-mac";
 import sharp from "sharp";
+import beep from "beepbeep";
 
 if (!fs.existsSync("data")) fs.mkdirSync("data");
 
@@ -37,7 +38,8 @@ server.get("/sources", async (req, res) => {
 
 const receivers: { [name: string]: grandiose.Receiver } = {},
   cameras = {
-    left: "MEVO-28D9W (Mevo-28D9W)",
+    left: "28D9W",
+    center: "28CQN",
   };
 
 async function getReceiver(cameraName: string) {
@@ -47,7 +49,7 @@ async function getReceiver(cameraName: string) {
     for (let i = 0; i < 10; i++) {
       try {
         const sources = await grandiose.find({}, 1000),
-          source = sources.find((s) => s.name === cameraName)!;
+          source = sources.find((s) => s.name.includes(cameraName))!;
 
         receiver = await grandiose.receive({
           source,
@@ -94,6 +96,18 @@ async function getImage(cameraName: string) {
 
   return buff!;
 }
+
+async function run() {
+  let i = 0;
+  while (true) {
+    const img = await getImage(cameras.center);
+    beep();
+    fs.writeFileSync(`./data/capture/${i++}.jpg`, img);
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+}
+
+run();
 
 server.get("/live", async (req, res) => {
   res.contentType("jpg");
