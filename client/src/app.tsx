@@ -142,8 +142,8 @@ type State = {
 
 const LS_KEY = "eol-state-new";
 
-const s = _.shuffle(_.range(6, 4109));
-let x: State = { history: [], words: s.map((x) => x + "") };
+const s = _.shuffle(_.range(6, 927));
+let x: State = { history: [], words: s.map((x) => x + "_") };
 try {
   x = JSON.parse(localStorage.getItem(LS_KEY)!) ?? x;
 } catch {}
@@ -200,11 +200,9 @@ function SaveLoad() {
     <div
       style={{
         position: "absolute",
-        bottom: 0,
-        right: 0,
-        padding: 10,
+        bottom: 10,
+        right: 10,
         display: "flex",
-        flexDirection: "row",
         gap: 10,
       }}
     >
@@ -256,12 +254,7 @@ function Encoder(props: TrainerProps) {
   useEffect(() => {
     props.socket.on("word", (w) => setWord(w));
   }, []);
-  return (
-    <div>
-      {word}
-      {word && <Image src={word} />}
-    </div>
-  );
+  return <Container>{word && <Image src={word} />}</Container>;
 }
 
 function Decoder(props: TrainerProps) {
@@ -280,7 +273,9 @@ function Decoder(props: TrainerProps) {
     localStorage.setItem(LS_KEY, JSON.stringify(state));
   }, [state.history.length]);
 
-  const [encoding, setEncoding] = useState(true);
+  const [encoding, setEncoding] = useState<"encoding" | "decoding" | "summary">(
+    "encoding"
+  );
 
   useEffect(() => {
     if (nextWord) props.socket.emit("word", nextWord.string);
@@ -289,63 +284,52 @@ function Decoder(props: TrainerProps) {
   return (
     <>
       {nextWord ? (
-        encoding ? (
-          <div>
-            <p>decode</p>
-            <LiveImage src="left" />
-            <button autoFocus onClick={() => setEncoding(false)}>
-              ready
-            </button>
-          </div>
+        encoding === "encoding" ? (
+          <Container>
+            <Controls>
+              <button autoFocus onClick={() => setEncoding("decoding")}>
+                ready
+              </button>
+            </Controls>
+          </Container>
+        ) : encoding === "decoding" ? (
+          <Container>
+            <LiveImage live src="left" />
+            <Controls>
+              <button autoFocus onClick={() => setEncoding("summary")}>
+                ready
+              </button>
+            </Controls>
+          </Container>
         ) : (
-          <div>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <LiveImage src="center" />
-              <Image src={nextWord.string} />
-            </div>
-            <button
-              autoFocus
-              onClick={async () => {
-                const round: Round = {
-                  actual: nextWord.string,
-                  distance: 1,
-                  seq: state.history.length,
-                };
-                setState({ ...state, history: [...state.history, round] });
-                setEncoding(true);
-              }}
-            >
-              GOOD
-            </button>
-            &nbsp;
-            <button
-              onClick={async () => {
-                const round: Round = {
-                  actual: nextWord.string,
-                  distance: 0.5,
-                  seq: state.history.length,
-                };
-                setState({ ...state, history: [...state.history, round] });
-                setEncoding(true);
-              }}
-            >
-              OK
-            </button>
-            &nbsp;
-            <button
-              onClick={async () => {
-                const round: Round = {
-                  actual: nextWord.string,
-                  distance: 0,
-                  seq: state.history.length,
-                };
-                setState({ ...state, history: [...state.history, round] });
-                setEncoding(true);
-              }}
-            >
-              BAD
-            </button>
-          </div>
+          <Container>
+            <LiveImage src="left" />
+            <Image src={nextWord.string} />
+            <LiveImage src="center" />
+            <Controls>
+              {["bad", "ok", "good"].map((word, i) => {
+                return (
+                  <button
+                    autoFocus={i === 0}
+                    onClick={async () => {
+                      const round: Round = {
+                        actual: nextWord.string,
+                        distance: i / 2,
+                        seq: state.history.length,
+                      };
+                      setState({
+                        ...state,
+                        history: [...state.history, round],
+                      });
+                      setEncoding("encoding");
+                    }}
+                  >
+                    {word}
+                  </button>
+                );
+              })}
+            </Controls>
+          </Container>
         )
       ) : null}
       <SaveLoad />
@@ -353,22 +337,88 @@ function Decoder(props: TrainerProps) {
   );
 }
 
-function LiveImage(props: { src: string }) {
+function Container(props: { children: React.ReactNode }) {
   return (
-    <img
-      style={{ flex: "0" }}
-      width={200}
-      src={`${API_URL}/live/${props.src}?x=${Math.random()}`}
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        background: "black",
+      }}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+function Controls(props: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 10,
+        left: 10,
+        display: "flex",
+        gap: 10,
+      }}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+function LiveImage(
+  props: {
+    src: string;
+    live?: boolean;
+  } & React.HtmlHTMLAttributes<HTMLDivElement>
+) {
+  const [x, sx] = useState(Math.random());
+
+  // useEffect(() => {
+  //   if (props.live) {
+  //     const t = setInterval(() => {
+  //       sx(Math.random());
+  //     }, 200);
+  //     return () => clearInterval(t);
+  //   }
+  // }, [props.live]);
+
+  return (
+    <div
+      {...props}
+      style={{
+        backgroundImage: `url("${API_URL}/live/${
+          props.src
+        }?x=${Math.random()}")`,
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        height: "100%",
+        flex: 1,
+        ...props.style,
+      }}
     />
   );
 }
 
-function Image(props: { src: string }) {
+function Image(
+  props: { src: string } & React.HtmlHTMLAttributes<HTMLDivElement>
+) {
   return (
-    <img
-      style={{ flex: "none" }}
-      width={200}
-      src={`${API_URL}/frame/${props.src}`}
+    <div
+      {...props}
+      style={{
+        backgroundImage: `url("${API_URL}/frame/${props.src.replace('_', '')}")`,
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        height: "100%",
+        flex: 1,
+        ...props.style,
+      }}
     />
   );
 }
