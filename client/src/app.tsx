@@ -254,7 +254,7 @@ function Encoder(props: TrainerProps) {
   useEffect(() => {
     props.socket.on("word", (w) => setWord(w));
   }, []);
-  return <Container>{word && <Image src={word} />}</Container>;
+  return <Container>{word && <ImageX src={word} />}</Container>;
 }
 
 function Decoder(props: TrainerProps) {
@@ -304,7 +304,7 @@ function Decoder(props: TrainerProps) {
         ) : (
           <Container>
             <LiveImage src="left" />
-            <Image src={nextWord.string} />
+            <ImageX src={nextWord.string} />
             <LiveImage src="center" />
             <Controls>
               {["bad", "ok", "good"].map((word, i) => {
@@ -371,6 +371,14 @@ function Controls(props: { children: React.ReactNode }) {
   );
 }
 
+function preload(url: string) {
+  return new Promise((res) => {
+    var img = new Image();
+    img.src = url;
+    img.onload = res;
+  });
+}
+
 function LiveImage(
   props: {
     src: string;
@@ -379,22 +387,22 @@ function LiveImage(
 ) {
   const [x, sx] = useState(Math.random());
 
-  // useEffect(() => {
-  //   if (props.live) {
-  //     const t = setInterval(() => {
-  //       sx(Math.random());
-  //     }, 200);
-  //     return () => clearInterval(t);
-  //   }
-  // }, [props.live]);
+  useEffect(() => {
+    if (props.live) {
+      const t = setInterval(async () => {
+        const nx = Math.random();
+        await preload(`${API_URL}/live/${props.src}?x=${x}`);
+        sx(nx);
+      }, 200);
+      return () => clearInterval(t);
+    }
+  }, [props.live]);
 
   return (
     <div
       {...props}
       style={{
-        backgroundImage: `url("${API_URL}/live/${
-          props.src
-        }?x=${Math.random()}")`,
+        backgroundImage: `url("${API_URL}/live/${props.src}?x=${x}")`,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",
         height: "100%",
@@ -405,14 +413,17 @@ function LiveImage(
   );
 }
 
-function Image(
+function ImageX(
   props: { src: string } & React.HtmlHTMLAttributes<HTMLDivElement>
 ) {
   return (
     <div
       {...props}
       style={{
-        backgroundImage: `url("${API_URL}/frame/${props.src.replace('_', '')}")`,
+        backgroundImage: `url("${API_URL}/frame/${props.src.replace(
+          "_",
+          ""
+        )}")`,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",
         height: "100%",
