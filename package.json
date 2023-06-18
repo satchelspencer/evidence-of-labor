@@ -2,12 +2,12 @@
   "private": true,
   "workspaces": [
     "client",
-    "server"
+    "trainer"
   ],
   "dependencies": {
     "concurrently": "^8.0.1"
   },
   "scripts": {
-    "start": "concurrently -p name --names \"server,client\" \"yarn workspace @eol/server start\" \"yarn workspace @eol/client start\""
+    "start": "concurrently -p name --names \"trainer,client\" \"yarn workspace @eol/trainer start\" \"yarn workspace @eol/client start\""
   }
 }
