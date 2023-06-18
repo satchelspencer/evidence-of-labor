@@ -21,7 +21,7 @@ type Vocab = {
   words: Word[];
 };
 
-const SET_SIZE = 5;
+const SET_SIZE = 3;
 const WORD_FORGIVE_LENGTH = 2;
 
 function getVocab(history: History, wordList: string[]): Vocab {
@@ -99,11 +99,11 @@ function sampleVocab(vocab: Vocab, seq: number) {
     scored = _.sortBy(
       meanDistSorted.map((word, idx) => {
         const score =
-            1 -
-            wavg([
-              [normDist(word), 1],
-              [1 - normSeen(word), 1],
-            ]),
+          1 -
+          wavg([
+            [normDist(word), 1],
+            [1 - normSeen(word), 1],
+          ]),
           res: [Word, number] = [
             word,
             idx <= thresh && _.isNaN(score) ? 1 : score,
@@ -146,7 +146,7 @@ const s = _.shuffle(_.range(6, 927));
 let x: State = { history: [], words: s.map((x) => x + "_") };
 try {
   x = JSON.parse(localStorage.getItem(LS_KEY)!) ?? x;
-} catch {}
+} catch { }
 
 const API_URL = `http://${window.location.hostname}:3001`;
 
@@ -261,9 +261,9 @@ function Decoder(props: TrainerProps) {
   const [state, setState] = useState<State>(x);
 
   const vocab = useMemo(
-      () => getVocab(state.history, state.words),
-      [Math.floor(state.history.length / SET_SIZE), state.words]
-    ),
+    () => getVocab(state.history, state.words),
+    [Math.floor(state.history.length / SET_SIZE), state.words]
+  ),
     nextWord = useMemo(
       () => sampleVocab(vocab, state.history.length),
       [vocab, state.history.length]
@@ -286,15 +286,16 @@ function Decoder(props: TrainerProps) {
       {nextWord ? (
         encoding === "encoding" ? (
           <Container>
+            <LiveImage live src="left" />
             <Controls>
               <button autoFocus onClick={() => setEncoding("decoding")}>
-                ready
+                ready?
               </button>
             </Controls>
           </Container>
         ) : encoding === "decoding" ? (
           <Container>
-            <LiveImage live src="left" />
+            <LiveImage src="left" />
             <Controls>
               <button autoFocus onClick={() => setEncoding("summary")}>
                 ready
@@ -372,10 +373,10 @@ function Controls(props: { children: React.ReactNode }) {
 }
 
 function preload(url: string) {
-  return new Promise((res) => {
+  return new Promise<void>((res) => {
     var img = new Image();
     img.src = url;
-    img.onload = res;
+    img.onload = () => setTimeout(() => res(), 500);
   });
 }
 
@@ -391,9 +392,9 @@ function LiveImage(
     if (props.live) {
       const t = setInterval(async () => {
         const nx = Math.random();
-        await preload(`${API_URL}/live/${props.src}?x=${x}`);
+        await preload(`${API_URL}/live/${props.src}?x=${nx}`);
         sx(nx);
-      }, 200);
+      }, 500);
       return () => clearInterval(t);
     }
   }, [props.live]);
