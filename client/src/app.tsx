@@ -99,11 +99,11 @@ function sampleVocab(vocab: Vocab, seq: number) {
     scored = _.sortBy(
       meanDistSorted.map((word, idx) => {
         const score =
-          1 -
-          wavg([
-            [normDist(word), 1],
-            [1 - normSeen(word), 1],
-          ]),
+            1 -
+            wavg([
+              [normDist(word), 1],
+              [1 - normSeen(word), 1],
+            ]),
           res: [Word, number] = [
             word,
             idx <= thresh && _.isNaN(score) ? 1 : score,
@@ -146,7 +146,7 @@ const s = _.shuffle(_.range(6, 927));
 let x: State = { history: [], words: s.map((x) => x + "_") };
 try {
   x = JSON.parse(localStorage.getItem(LS_KEY)!) ?? x;
-} catch { }
+} catch {}
 
 const API_URL = `http://${window.location.hostname}:3001`;
 
@@ -261,9 +261,9 @@ function Decoder(props: TrainerProps) {
   const [state, setState] = useState<State>(x);
 
   const vocab = useMemo(
-    () => getVocab(state.history, state.words),
-    [Math.floor(state.history.length / SET_SIZE), state.words]
-  ),
+      () => getVocab(state.history, state.words),
+      [Math.floor(state.history.length / SET_SIZE), state.words]
+    ),
     nextWord = useMemo(
       () => sampleVocab(vocab, state.history.length),
       [vocab, state.history.length]
@@ -306,7 +306,7 @@ function Decoder(props: TrainerProps) {
           <Container>
             <LiveImage src="left" />
             <ImageX src={nextWord.string} />
-            <LiveImage src="center" />
+            {/* <LiveImage src="center" /> */}
             <Controls>
               {["bad", "ok", "good"].map((word, i) => {
                 return (
@@ -329,6 +329,37 @@ function Decoder(props: TrainerProps) {
                   </button>
                 );
               })}
+              &nbsp;
+              <button
+                onClick={async () => {
+                  const live = await preload(
+                      `${API_URL}/live/left?x=${Math.random()}`
+                    ),
+                    frame = await preload(
+                      `${API_URL}/frame/${nextWord.string.replace(
+                        "_",
+                        ""
+                      )}?x=${Math.random()}`
+                    );
+
+                  const canvas = document.createElement("canvas"),
+                    ctxt = canvas.getContext("2d");
+
+                  canvas.width = 1000;
+                  canvas.height = 500;
+
+                  ctxt?.drawImage(live, 0, 0, 500, 500);
+                  ctxt?.drawImage(frame, 500, 0, 500, 500);
+
+                  var image = canvas.toDataURL();
+                  var aDownloadLink = document.createElement("a");
+                  aDownloadLink.download = `${nextWord.string}.png`;
+                  aDownloadLink.href = image;
+                  aDownloadLink.click();
+                }}
+              >
+                save image
+              </button>
             </Controls>
           </Container>
         )
@@ -373,10 +404,11 @@ function Controls(props: { children: React.ReactNode }) {
 }
 
 function preload(url: string) {
-  return new Promise<void>((res) => {
+  return new Promise<HTMLImageElement>((res) => {
     var img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = url;
-    img.onload = () => setTimeout(() => res(), 500);
+    img.onload = () => setTimeout(() => res(img), 500);
   });
 }
 
