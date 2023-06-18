@@ -9,6 +9,7 @@ data
 
 # production
 build
+media
 
 # misc
 .DS_Store

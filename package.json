@@ -2,7 +2,8 @@
   "private": true,
   "workspaces": [
     "client",
-    "trainer"
+    "trainer",
+    "automata"
   ],
   "dependencies": {
     "concurrently": "^8.0.1"

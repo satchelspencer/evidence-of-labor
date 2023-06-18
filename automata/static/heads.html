@@ -1,0 +1,42 @@
+<html>
+  <head>
+    <title>monitor</title>
+    <style type="text/css">
+      body {
+        padding: 0;
+        margin: 0;
+        background: black;
+      }
+      #wrapper {
+        position: absolute;
+        width: 800px;
+        height: 600px;
+        border: 1px solid #222;
+        transform-origin: 0 0 0;
+        color: white;
+        font-family: sans-serif;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #wrapper video{
+        width:100%;
+      }
+    </style>
+    <script src="./mapper.js"></script>
+  </head>
+  <body>
+    <div id="wrapper"><video id="video" autoplay loop muted src="21.mp4"></video></div>
+    <script type="text/javascript">
+      
+
+      const wrapper = document.getElementById('wrapper'),
+      video = document.getElementById('video')
+
+
+      projMapGui(wrapper)
+     
+    </script>
+  </body>
+</html>

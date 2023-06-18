@@ -1,0 +1,229 @@
+<html>
+  <head>
+    <title>monitor</title>
+    <style type="text/css">
+      body {
+        padding: 0;
+        margin: 0;
+        background: black;
+      }
+      #wrapper {
+        position: absolute;
+        width: 800px;
+        height: 600px;
+        /* border: 1px solid #222; */
+        transform-origin: 0 0 0;
+        padding: 10px;
+        color: white;
+        font-family: sans-serif;
+        font-size: 12px;
+      }
+      .row {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+      .cell {
+        width: 90px;
+        height: 90px;
+        background: #333;
+        border-radius: 2px;
+        position: relative;
+        transition: 1s all;
+        border:2px solid transparent;
+      }
+      .cell.live{
+        border:2px solid red;
+      }
+      .cell.active {
+        background: #585858;
+      }
+      .cell .number {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+      .cell.hideIn .arrowContainer .in {
+        opacity: 0;
+      }
+      .cell.hideOut .arrowContainer .out {
+        opacity: 0;
+      }
+      .arrowContainer {
+        position: absolute;
+        width: 100%;
+        height: 50%;
+        top: 0;
+        left: 0%;
+        transform-origin: 50% 100%;
+        text-align: center;
+        padding: 5px;
+        box-sizing: border-box;
+      }
+      .arrowContainer img {
+        transition: 1s all;
+      }
+    </style>
+    <script src="./mapper.js"></script>
+  </head>
+  <body>
+    <div id="wrapper"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript">
+      function string2io(str) {
+        return str.split('').map(s => parseInt(s, 10))
+      }
+
+      function io2string(io) {
+        return io.join('')
+      }
+
+      function string2cell(str) {
+        return str.split('-').map(string2io)
+      }
+
+      function cell2string(cell) {
+        return cell.map(io2string).join('-')
+      }
+
+      function addClass(el, cname) {
+        const c = (el.className || '').split(' ')
+        if (!c.includes(cname)) c.push(cname)
+        el.className = c.join(' ')
+      }
+
+      function rmClass(el, cname) {
+        let c = (el.className || '').split(' ')
+        c = c.filter(n => n !== cname)
+        el.className = c.join(' ')
+      }
+
+      const wrapper = document.getElementById('wrapper')
+      const socket = io.connect('http://localhost:1111/')
+      let shouldReset = false,
+        currentSeq = null
+
+      const directionNames = ['top', 'left', 'bottom', 'right']
+
+      // projMapGui(wrapper)
+
+      const [down, up] = ['arrow-down', 'arrow-up'].map(name => {
+        return a => {
+          const img = document.createElement('img')
+          img.src = './icons/' + name + '.svg'
+          img.width = 15
+          img.className = name === 'arrow-down' ? 'in' : 'out'
+          if (a) img.style.filter = 'hue-rotate(231deg)'
+          return img
+        }
+      })
+
+      const cells = []
+      const cols = 8,
+        rows = 4
+      for (i = 0; i < rows; i++) {
+        const row = document.createElement('div')
+        row.className = 'row'
+        for (j = 0; j < cols; j++) {
+          const cell = document.createElement('div')
+          cell.className = 'cell'
+
+          const number = document.createElement('div')
+          number.className = 'number'
+          number.innerHTML = '#'+ (i * 8 + j + 1)
+
+          const d = [0, 270, 180, 90]
+          const arrows = []
+          d.forEach(r => {
+            const arrowWrapper = document.createElement('div')
+            arrowWrapper.className = 'arrowContainer'
+            arrowWrapper.style.transform = 'rotate(' + r + 'deg)'
+
+            arrowWrapper.appendChild(down())
+            arrowWrapper.appendChild(down())
+            arrowWrapper.appendChild(up())
+
+            arrows.push(arrowWrapper)
+            cell.appendChild(arrowWrapper)
+          })
+
+          cell.appendChild(number)
+
+          cells.push({
+            cell,
+            arrows,
+          })
+          row.appendChild(cell)
+        }
+        wrapper.appendChild(row)
+      }
+
+      socket.on('connect', () => {
+        if (shouldReset) window.location.reload()
+        else {
+          //first connect
+        }
+      })
+      socket.on('disconnect', () => {
+        shouldReset = true
+      })
+
+      socket.on('sequence', rseq => {
+        currentSeq = rseq
+        let lastUsed = {}
+        cells.forEach((co, i) => {
+          const { cell, arrows } = co,
+            step = rseq[i],
+            live = Object.keys(step[1]).filter(k => !lastUsed[k])[0]
+
+          arrows.forEach((arrowWrapper, i) => (arrowWrapper.innerHTML = ''))
+          if (live) {
+            co.live = live
+            const c = string2cell(live)
+            c.forEach((io, i) => {
+              const getArrow = !i ? down : up
+              io.forEach((dir, j) => {
+                const arrowWrapper = arrows[j]
+                if (dir === 1) arrowWrapper.appendChild(getArrow())
+                if (dir === 2) arrowWrapper.appendChild(getArrow(true))
+                if (dir === 3) {
+                  arrowWrapper.appendChild(getArrow())
+                  arrowWrapper.appendChild(getArrow(true))
+                }
+              })
+            })
+          }
+          lastUsed = step[1]
+        })
+      })
+
+      socket.on('warnIndex', ({ step, warnedOut, hasEntered }) => {
+        const usedStep = hasEntered?step:step-1, used = {}
+        if(currentSeq[usedStep]){
+          currentSeq[usedStep][0].forEach(row => row.forEach(cell => {
+            used[cell2string(cell)] = 1
+          }))
+        }
+        console.log('stepIndex', step, warnedOut)
+        cells.forEach(({ cell, live }, i) => {
+          if(used[live]) addClass(cell, 'active')
+          else rmClass(cell, 'active')
+          if (i <= step) {
+            rmClass(cell, 'hideIn')
+            if (warnedOut) rmClass(cell, 'hideOut')
+          } else {
+            addClass(cell, 'hideIn')
+            addClass(cell, 'hideOut')
+          }
+        })
+      })
+    </script>
+  </body>
+</html>
