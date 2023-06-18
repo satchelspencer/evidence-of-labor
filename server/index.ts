@@ -11,10 +11,6 @@ import grandiose from "grandiose-mac";
 import sharp from "sharp";
 import beep from "beepbeep";
 
-import { createRequire } from "node:module";
-const require = createRequire(import.meta.url);
-//const video = require("./build/Release/video.node");
-
 // const mat = new video.Mat(500, 500, 16)
 // console.log(mat.show());
 
