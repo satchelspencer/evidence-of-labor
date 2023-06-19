@@ -86,12 +86,12 @@ async function getImage(cameraName: string) {
           channels: 4,
         },
       })
-        .resize({ height: 1000 })
+        .resize({ height: 500 })
         .extract({
           top: 0,
-          left: Math.floor((1000 * (16 / 9) - 1000) / 2),
-          width: 1000,
-          height: 1000,
+          left: Math.floor((500 * (16 / 9) - 500) / 2),
+          width: 500,
+          height: 500,
         })
         .toFormat("jpg")
         .toBuffer();
