@@ -43,6 +43,7 @@ server.get("/sources", async (req, res) => {
 const receivers: { [name: string]: grandiose.Receiver } = {},
   cameras = {
     left: "28D9W",
+    right: "28D32",
     center: "28CQN",
   };
 

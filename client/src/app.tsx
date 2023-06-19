@@ -412,6 +412,14 @@ function preload(url: string) {
   });
 }
 
+function preloadL(url: string) {
+  return new Promise<void>((res) => {
+    var img = new Image();
+    img.src = url;
+    img.onload = () => setTimeout(() => res(), 500);
+  });
+}
+
 function LiveImage(
   props: {
     src: string;
@@ -424,7 +432,7 @@ function LiveImage(
     if (props.live) {
       const t = setInterval(async () => {
         const nx = Math.random();
-        await preload(`${API_URL}/live/${props.src}?x=${nx}`);
+        await preloadL(`${API_URL}/live/${props.src}?x=${nx}`);
         sx(nx);
       }, 500);
       return () => clearInterval(t);
