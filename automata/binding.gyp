@@ -17,11 +17,11 @@
       ],
       "include_dirs": [
         "src",
-        "/opt/homebrew/Cellar/opencv/4.7.0_6/include/opencv4",
+        "<!@(brew --prefix)/Cellar/opencv/4.7.0_6/include/opencv4",
         "<!@(node -p \"require('node-addon-api').include\")"
       ],
       "libraries": [
-        "-L/opt/homebrew/Cellar/opencv/4.7.0_6/lib/ -lopencv_core -lopencv_highgui -lopencv_imgcodecs -lopencv_imgproc -lopencv_features2d -lopencv_calib3d -lopencv_photo -lopencv_objdetect -lopencv_ml -lopencv_video -lopencv_videoio -lopencv_videostab -lopencv_dnn -lopencv_face -lopencv_tracking -lopencv_xfeatures2d -lopencv_ximgproc -Wl,-rpath,/opt/homebrew/Cellar/opencv/4.7.0_6/lib/",
+        "-L<!@(brew --prefix)/Cellar/opencv/4.7.0_6/lib/ -lopencv_core -lopencv_highgui -lopencv_imgcodecs -lopencv_imgproc -lopencv_features2d -lopencv_calib3d -lopencv_photo -lopencv_objdetect -lopencv_ml -lopencv_video -lopencv_videoio -lopencv_videostab -lopencv_dnn -lopencv_face -lopencv_tracking -lopencv_xfeatures2d -lopencv_ximgproc -Wl,-rpath,<!@(brew --prefix)/Cellar/opencv/4.7.0_6/lib/",
 			  "-framework opencl"
 		  ],
       'defines': [ 'NAPI_DISABLE_CPP_EXCEPTIONS' ],
