@@ -151,24 +151,33 @@ try {
 const API_URL = `http://${window.location.hostname}:3001`;
 
 export default function App() {
-  const [socket, setSocket] = useState<Socket>();
+  const [socket, setSocket] = useState<Socket>(),
+    [autoSocket, setAutoSocket] = useState<Socket>();
 
   useEffect(() => {
     const s = io(API_URL);
-    s.on("connect", () => {
-      setSocket(s);
-    });
+    s.on("connect", () => setSocket(s));
+
+    const as = io(`http://${window.location.hostname}:1111`);
+    as.on("connect", () => setAutoSocket(as));
   }, []);
 
-  return socket ? <Tpicker socket={socket} /> : <div>connecting...</div>;
+  return socket ? (
+    <Tpicker asocket={autoSocket} socket={socket} />
+  ) : (
+    <div>connecting...</div>
+  );
 }
 
 interface TrainerProps {
   socket: Socket;
+  asocket?: Socket;
 }
 
 function Tpicker(props: TrainerProps) {
-  const [encoder, setEncoder] = useState<boolean | null>(null);
+  const [route, setRoute] = useState<
+    "encoder" | "decoder" | "monitor" | "liveLeft" | "liveRight" | null
+  >(null);
 
   return (
     <div
@@ -181,17 +190,70 @@ function Tpicker(props: TrainerProps) {
         justifyContent: "center",
       }}
     >
-      {encoder === null ? (
-        <div>
-          <button onClick={() => setEncoder(true)}>ENCODE</button>
-          <button onClick={() => setEncoder(false)}>DECODE</button>
-        </div>
-      ) : encoder ? (
+      {route === "encoder" ? (
         <Encoder {...props} />
-      ) : (
+      ) : route === "decoder" ? (
         <Decoder {...props} />
+      ) : route === "liveLeft" ? (
+        props.asocket ? (
+          <LiveEncoder left={true} socket={props.asocket} />
+        ) : (
+          "no asocket"
+        )
+      ) : route === "liveRight" ? (
+        props.asocket ? (
+          <LiveEncoder left={false} socket={props.asocket} />
+        ) : (
+          "no asocket"
+        )
+      ) : route === "monitor" ? (
+        <Monitor />
+      ) : (
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => setRoute("encoder")}>ENCODE</button>
+          <button onClick={() => setRoute("decoder")}>DECODE</button>
+          <button onClick={() => setRoute("monitor")}>MONITOR</button>
+          <button onClick={() => setRoute("liveLeft")}>Live LEFT</button>
+          <button onClick={() => setRoute("liveRight")}>Live RIGHT</button>
+        </div>
       )}
     </div>
+  );
+}
+
+function Monitor() {
+  return (
+    <Container>
+      <LiveImage live src="left" />
+      <LiveImage live src="right" />
+    </Container>
+  );
+}
+
+function LiveEncoder(props: { left: boolean; socket: Socket }) {
+  const [step, setStep] = useState(0);
+  const allowed = {
+    left: [
+      117, 247, 446, 605, 726, 826, 190, 332, 470, 616, 732, 829, 213, 355, 526,
+      658, 742, 879, 219, 394, 559, 702, 780, 96,
+    ],
+    right: [
+      101, 316, 546, 711, 778, 849, 915, 223, 414, 597, 712, 823, 86, 916, 281,
+      536, 649, 748, 828, 870, 291, 53, 703, 765, 832, 898,
+    ],
+  };
+  useEffect(() => {
+    props.socket.on("warnIndex", (e) => {
+      setStep(e.step);
+    });
+  }, []);
+
+  const list = allowed[props.left ? "left" : "right"];
+
+  return (
+    <Container>
+      <ImageX src={list[(step + list.length) % list.length] + "_"} />
+    </Container>
   );
 }
 
