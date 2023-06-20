@@ -72,6 +72,7 @@ function play(file, cb) {
 
 const warnOffset = 7.03 * 1000;
 function playWarning(cb = () => {}) {
+  emit("photoStep", { step: currentStep + 1 });
   play("123", cb);
 }
 
@@ -81,8 +82,8 @@ function speak(text, cb = () => {}) {
 
 /* renderer config */
 const framerate = 30,
-  period = Math.floor(16 * framerate),
-  pauseDelay = 10000,
+  period = Math.floor(20 * framerate),
+  pauseDelay = 15 * 1000,
   transLen = 4 * framerate,
   videoLen = period + transLen,
   targetSize = 1260,
@@ -234,7 +235,9 @@ function renderSequence(rseq, callback) {
       emit("dancerState", "entering");
       emit("stepIndex", stepIndex);
     }
-    if (frameCurrent === warnFrame && !isCutoff) playWarning();
+    if (frameCurrent === warnFrame && !isCutoff) {
+      playWarning();
+    }
     if (frameCurrent === transLen) {
       emit("dancerState", "in box");
       if (!isCutoff) {
@@ -333,8 +336,9 @@ function renderSequence(rseq, callback) {
 }
 //test copy 2
 const sequences = [
-  "media/sequences/live4341495040.json",
   "media/sequences/live4343164333.json",
+  "media/sequences/live4341495040.json",
+  "media/sequences/live4341495040.json",
   "media/sequences/live4341495040.json",
   //"media/sequences/live4389077544.json"
   // "media/119.json",

@@ -224,26 +224,28 @@ function Tpicker(props: TrainerProps) {
 function Monitor() {
   return (
     <Container>
-      <LiveImage live src="left" />
       <LiveImage live src="right" />
+      <LiveImage live src="left" />
     </Container>
   );
 }
 
+const allowed = {
+  left: _.shuffle([
+    117, 247, 446, 605, 726, 826, 190, 332, 470, 616, 732, 829, 213, 355, 526,
+    658, 742, 879, 219, 394, 559, 702, 780, 96,
+  ]),
+  right: _.shuffle([
+    101, 316, 546, 711, 778, 849, 915, 223, 414, 597, 712, 823, 86, 916, 281,
+    536, 649, 748, 828, 870, 291, 53, 703, 765, 832, 898,
+  ]),
+};
+
 function LiveEncoder(props: { left: boolean; socket: Socket }) {
   const [step, setStep] = useState(0);
-  const allowed = {
-    left: [
-      117, 247, 446, 605, 726, 826, 190, 332, 470, 616, 732, 829, 213, 355, 526,
-      658, 742, 879, 219, 394, 559, 702, 780, 96,
-    ],
-    right: [
-      101, 316, 546, 711, 778, 849, 915, 223, 414, 597, 712, 823, 86, 916, 281,
-      536, 649, 748, 828, 870, 291, 53, 703, 765, 832, 898,
-    ],
-  };
+
   useEffect(() => {
-    props.socket.on("warnIndex", (e) => {
+    props.socket.on("photoStep", (e) => {
       setStep(e.step);
     });
   }, []);
